@@ -4,10 +4,68 @@ const inputEl = document.getElementById('input');
 const sendBtn = document.getElementById('send');
 const themeSelectEl = document.getElementById('theme-select');
 const newChatBtn = document.getElementById('new-chat');
+const chatListEl = document.getElementById('chat-list');
 
-const conversation = [
+// Conversation state and history
+let conversation = [
   { role: 'system', content: 'You are a helpful assistant. Provide direct, clear answers without showing your reasoning process.' }
 ];
+let currentChatId = localStorage.getItem('currentChatId') || null;
+let chats = JSON.parse(localStorage.getItem('chats') || '{}');
+
+function saveState() {
+  localStorage.setItem('chats', JSON.stringify(chats));
+  if (currentChatId) localStorage.setItem('currentChatId', currentChatId);
+  else localStorage.removeItem('currentChatId');
+}
+
+function createChat(title) {
+  const ts = Date.now();
+  const id = 'c_' + ts;
+  chats[id] = { id, title: title || 'New chat', messages: [...conversation], createdAt: ts };
+  currentChatId = id;
+  saveState();
+  renderChatList();
+  return id;
+}
+
+function updateCurrentChatTitleFrom(text) {
+  const title = text.trim().slice(0, 40) || 'New chat';
+  if (currentChatId && chats[currentChatId]) {
+    chats[currentChatId].title = title;
+    saveState();
+    renderChatList();
+  }
+}
+
+function renderChatList() {
+  if (!chatListEl) return;
+  chatListEl.innerHTML = '';
+  const ids = Object.keys(chats).sort((a,b) => ((chats[b].createdAt||0) - (chats[a].createdAt||0)));
+  for (const id of ids) {
+    const chat = chats[id];
+    const btn = document.createElement('button');
+    btn.className = 'item' + (id === currentChatId ? ' active' : '');
+    btn.innerHTML = `<span class="title">${escapeHtml(chat.title)}</span>`;
+    btn.addEventListener('click', () => {
+      loadChat(id);
+    });
+    chatListEl.appendChild(btn);
+  }
+}
+
+function loadChat(id) {
+  const chat = chats[id];
+  if (!chat) return;
+  currentChatId = id;
+  messagesEl.innerHTML = '';
+  conversation = chat.messages.map(m => ({...m}));
+  for (const m of conversation) {
+    if (m.role === 'system') continue;
+    appendMessage(m.role, m.content);
+  }
+  renderChatList();
+}
 
 function escapeHtml(str) {
   return str
@@ -164,6 +222,11 @@ formEl.addEventListener('submit', async (e) => {
   // Optimistic render
   appendMessage('user', text);
   conversation.push({ role: 'user', content: text });
+  if (!currentChatId) {
+    currentChatId = createChat(text);
+  } else {
+    updateCurrentChatTitleFrom(text);
+  }
 
   inputEl.value = '';
   inputEl.disabled = true;
@@ -193,6 +256,10 @@ formEl.addEventListener('submit', async (e) => {
       const data = await res.json().catch(() => ({ error: 'Request failed' }));
       body.textContent = data.error || 'Request failed';
       conversation.push({ role: 'assistant', content: body.textContent });
+      if (currentChatId && chats[currentChatId]) {
+        chats[currentChatId].messages = [...conversation];
+        saveState();
+      }
       return;
     }
 
@@ -218,6 +285,10 @@ formEl.addEventListener('submit', async (e) => {
           // finalize markdown rendering
           body.innerHTML = markdownToHtml(fullText);
           conversation.push({ role: 'assistant', content: fullText });
+          if (currentChatId && chats[currentChatId]) {
+            chats[currentChatId].messages = [...conversation];
+            saveState();
+          }
           continue;
         }
         fullText += dataLine;
@@ -230,6 +301,10 @@ formEl.addEventListener('submit', async (e) => {
     // Safety: finalize once more
     body.innerHTML = markdownToHtml(fullText);
     conversation.push({ role: 'assistant', content: fullText });
+    if (currentChatId && chats[currentChatId]) {
+      chats[currentChatId].messages = [...conversation];
+      saveState();
+    }
   } catch (err) {
     appendMessage('assistant', String(err));
   } finally {
@@ -270,11 +345,20 @@ themeSelectEl.addEventListener('change', (e) => {
 
 // New chat resets conversation and UI
 newChatBtn?.addEventListener('click', () => {
-  conversation.splice(1); // keep system prompt
+  conversation = [conversation[0]]; // reset to only system
   messagesEl.innerHTML = '';
   inputEl.value = '';
   autoResize();
   inputEl.focus();
+  currentChatId = null;
+  renderChatList();
 });
+
+// Initial render of chat list
+renderChatList();
+// Load the last open chat if available
+if (currentChatId && chats[currentChatId]) {
+  loadChat(currentChatId);
+}
 
 

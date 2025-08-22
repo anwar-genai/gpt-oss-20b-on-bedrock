@@ -19,7 +19,10 @@
       .sidebar .newchat { margin: 10px 0 14px; }
       .btn { width: 100%; border: 1px solid var(--input-border); background: var(--button-bg); color: var(--button-text); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
       .sidebar .list { flex:1 1 auto; overflow:auto; display:flex; flex-direction: column; gap: 8px; }
-      .sidebar .item { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; color: var(--muted); background: transparent; text-align: left; }
+      .sidebar .item { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); background: transparent; text-align: left; cursor: pointer; display:flex; align-items:center; gap:8px; }
+      .sidebar .item .title { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .sidebar .item:hover { border-color: var(--accent); }
+      .sidebar .item.active { background: color-mix(in oklab, var(--accent) 18%, transparent); border-color: var(--accent); }
 
       .container { padding: 24px; height: 100%; display:flex; flex-direction: column; }
       header { display:flex; align-items:center; gap:12px; margin-bottom: 12px; flex: 0 0 auto; }
