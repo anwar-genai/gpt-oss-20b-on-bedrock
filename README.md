@@ -1,15 +1,15 @@
-# AWS Bedrock Interactive Chat
+# ChatAnwar (AWS Bedrock web chat)
 
-An interactive terminal-based chat application that uses AWS Bedrock's GPT-OSS-20B model for natural language conversations.
+ChatAnwar is a lightweight web app and API for chatting with AWS Bedrock models. It includes a modern browser UI (streaming responses, Markdown rendering, themes, and chat history) backed by a small Flask server.
 
 ## Features
 
-- 🤖 **Interactive Chat Interface**: Real-time conversation with AI assistant
-- 💬 **Conversation Memory**: Maintains context across multiple messages
-- 🧹 **Clean Output**: Automatically removes reasoning artifacts from responses
-- 🛡️ **Error Handling**: Robust error handling for network issues and API errors
-- 🚪 **Easy Exit**: Multiple ways to exit the conversation
-- ⚡ **Fast Response**: Direct integration with AWS Bedrock API
+- 🤖 **Web Chat UI**: Live streaming responses, Markdown (headings, lists, code, tables)
+- 🎨 **Themes**: Dark, Light, and Solar themes with persistence
+- 🗂️ **Chat History**: Local, persistent sidebar with quick switching
+- ⌨️ **UX**: Enter to send, Shift+Enter for newline, auto-resizing input
+- 📋 **Actions**: Copy assistant message content
+- 🔌 **API**: Simple `/api/chat` and `/api/chat/stream` endpoints
 
 ## Prerequisites
 
@@ -60,34 +60,17 @@ Before running this application, you need:
 
 ## Usage
 
-### Basic Usage
+### Web App (recommended)
 
-1. **Start the interactive chat**
+1. Start the server
    ```bash
-   python bedrock_test.py
+   python app.py
    ```
 
-2. **Wait for connection confirmation**
-   ```
-   === AWS Bedrock Interactive Chat ===
-   Type 'quit', 'exit', or 'bye' to end the conversation
-   ==================================================
-   ✓ Connected to AWS Bedrock
-   
-   Chat started! Ask me anything...
-   ```
-
-3. **Start chatting!**
-   ```
-   You: What is AWS Bedrock?
-   Assistant: AWS Bedrock is a fully managed service that offers a choice of high-performing foundation models from leading AI companies...
-   ```
-
-4. **Exit the conversation**
-   ```
-   You: quit
-   Goodbye!
-   ```
+2. Open `http://localhost:5000`
+   - Type your message and press Enter
+   - Watch responses stream in real-time
+   - Use the sidebar to switch chats; click New chat to start fresh
 
 ### Web Frontend (Flask)
 
@@ -100,7 +83,7 @@ Before running this application, you need:
    - Visit `http://localhost:5000` in your browser
    - Type your message and press Send
 
-3. **API endpoint**
+3. **API endpoints**
    - `POST /api/chat`
    - Body:
      ```json
@@ -110,27 +93,28 @@ Before running this application, you need:
      ```json
      { "text": "assistant response" }
      ```
+   - `POST /api/chat/stream` (Server-Sent Events)
+     - Streams `data: <token>` lines and ends with `event: done`.
 
-### Available Commands
+### CLI (optional)
 
-- `quit` - Exit the chat
-- `exit` - Exit the chat  
-- `bye` - Exit the chat
-- `q` - Exit the chat
-- `Ctrl+C` - Interrupt and exit the chat
+For a terminal chat client, run:
+```bash
+python bedrock_test.py
+```
 
 ## Configuration
 
 ### Model Settings
 
-The application uses the following default settings:
+Defaults:
 
 - **Model**: `openai.gpt-oss-20b-1:0`
-- **Region**: `us-west-2`
+- **Region**: `us-west-2` (or from `AWS_REGION`/`AWS_DEFAULT_REGION`)
 - **Max Tokens**: 300
 - **Temperature**: 0.7
 
-To modify these settings, edit the `send_message_to_bedrock()` function in `bedrock_core.py`:
+To modify these settings, edit `send_message_to_bedrock()` in `bedrock_core.py`:
 
 ```python
 def send_message_to_bedrock(bedrock_client, messages, max_tokens=300):
@@ -144,7 +128,7 @@ def send_message_to_bedrock(bedrock_client, messages, max_tokens=300):
 
 ### AWS Region
 
-By default, the region is taken from `AWS_REGION` or `AWS_DEFAULT_REGION` environment variables. To hardcode or change the default, edit `get_bedrock_client()` in `bedrock_core.py`.
+By default, the region is taken from `AWS_REGION` or `AWS_DEFAULT_REGION`. To hardcode or change the default, edit `get_bedrock_client()` in `bedrock_core.py`.
 
 ```python
 from bedrock_core import get_bedrock_client
@@ -196,7 +180,8 @@ awsBedrock/
 │   ├── index.html
 │   └── app.js
 ├── requirements.txt     # Python dependencies
-├── README.md            # This documentation file
+├── README.md            # Public documentation (this file)
+├── README_DEV.md        # Developer notes (internal)
 └── virt/                # Virtual environment directory (if used)
 ```
 
