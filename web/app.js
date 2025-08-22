@@ -2,6 +2,7 @@ const messagesEl = document.getElementById('messages');
 const formEl = document.getElementById('form');
 const inputEl = document.getElementById('input');
 const sendBtn = document.getElementById('send');
+const themeSelectEl = document.getElementById('theme-select');
 
 const conversation = [
   { role: 'system', content: 'You are a helpful assistant. Provide direct, clear answers without showing your reasoning process.' }
@@ -134,8 +135,22 @@ function appendMessage(role, content) {
     body.textContent = content;
   }
 
+  // Actions (copy)
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'action-btn';
+  copyBtn.textContent = 'Copy';
+  copyBtn.addEventListener('click', async () => {
+    const text = role === 'assistant' ? body.innerText : body.textContent;
+    try { await navigator.clipboard.writeText(text); copyBtn.textContent = 'Copied'; setTimeout(()=>copyBtn.textContent='Copy', 1200); } catch {}
+  });
+  actions.appendChild(copyBtn);
+
   row.appendChild(avatar);
   row.appendChild(body);
+  row.appendChild(actions);
   messagesEl.appendChild(row);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
@@ -229,6 +244,27 @@ inputEl.addEventListener('keydown', (e) => {
     e.preventDefault();
     formEl.requestSubmit();
   }
+});
+
+// Auto-resize textarea
+const autoResize = () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(400, inputEl.scrollHeight) + 'px';
+};
+inputEl.addEventListener('input', autoResize);
+setTimeout(autoResize, 0);
+
+// Theme handling with persistence
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  themeSelectEl.value = theme;
+}
+const savedTheme = localStorage.getItem('theme') || 'dark';
+applyTheme(savedTheme);
+themeSelectEl.addEventListener('change', (e) => {
+  const t = e.target.value;
+  applyTheme(t);
+  localStorage.setItem('theme', t);
 });
 
 
