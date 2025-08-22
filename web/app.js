@@ -3,6 +3,7 @@ const formEl = document.getElementById('form');
 const inputEl = document.getElementById('input');
 const sendBtn = document.getElementById('send');
 const themeSelectEl = document.getElementById('theme-select');
+const newChatBtn = document.getElementById('new-chat');
 
 const conversation = [
   { role: 'system', content: 'You are a helpful assistant. Provide direct, clear answers without showing your reasoning process.' }
@@ -265,6 +266,15 @@ themeSelectEl.addEventListener('change', (e) => {
   const t = e.target.value;
   applyTheme(t);
   localStorage.setItem('theme', t);
+});
+
+// New chat resets conversation and UI
+newChatBtn?.addEventListener('click', () => {
+  conversation.splice(1); // keep system prompt
+  messagesEl.innerHTML = '';
+  inputEl.value = '';
+  autoResize();
+  inputEl.focus();
 });
 
 
