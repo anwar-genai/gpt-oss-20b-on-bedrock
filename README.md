@@ -31,7 +31,7 @@ Before running this application, you need:
 
 2. **Install required dependencies**
    ```bash
-   pip install boto3
+   pip install -r requirements.txt
    ```
 
 3. **Configure AWS credentials**
@@ -89,6 +89,28 @@ Before running this application, you need:
    Goodbye!
    ```
 
+### Web Frontend (Flask)
+
+1. **Start the web server**
+   ```bash
+   python app.py
+   ```
+
+2. **Open the chat UI**
+   - Visit `http://localhost:5000` in your browser
+   - Type your message and press Send
+
+3. **API endpoint**
+   - `POST /api/chat`
+   - Body:
+     ```json
+     { "messages": [{"role":"system","content":"..."}, {"role":"user","content":"..."}], "max_tokens": 300 }
+     ```
+   - Response:
+     ```json
+     { "text": "assistant response" }
+     ```
+
 ### Available Commands
 
 - `quit` - Exit the chat
@@ -108,7 +130,7 @@ The application uses the following default settings:
 - **Max Tokens**: 300
 - **Temperature**: 0.7
 
-To modify these settings, edit the `send_message_to_bedrock()` function in `bedrock_test.py`:
+To modify these settings, edit the `send_message_to_bedrock()` function in `bedrock_core.py`:
 
 ```python
 def send_message_to_bedrock(bedrock_client, messages, max_tokens=300):
@@ -122,13 +144,11 @@ def send_message_to_bedrock(bedrock_client, messages, max_tokens=300):
 
 ### AWS Region
 
-To change the AWS region, modify the region name in the main function:
+By default, the region is taken from `AWS_REGION` or `AWS_DEFAULT_REGION` environment variables. To hardcode or change the default, edit `get_bedrock_client()` in `bedrock_core.py`.
 
 ```python
-bedrock = boto3.client(
-    service_name="bedrock-runtime",
-    region_name="us-west-2"  # Change this to your preferred region
-)
+from bedrock_core import get_bedrock_client
+bedrock = get_bedrock_client()  # Uses AWS_REGION or AWS_DEFAULT_REGION
 ```
 
 ## Troubleshooting
@@ -168,8 +188,14 @@ print("\n" + "="*50 + "\n")
 
 ```
 awsBedrock/
-├── bedrock_test.py      # Main interactive chat application
+├── app.py               # Flask server exposing /api/chat and serving web UI
+├── bedrock_core.py      # Shared Bedrock client and helpers
+├── bedrock_test.py      # Terminal chat client
 ├── bedrock_test_clean.py # Alternative version with enhanced text cleaning
+├── web/                 # Frontend static files
+│   ├── index.html
+│   └── app.js
+├── requirements.txt     # Python dependencies
 ├── README.md            # This documentation file
 └── virt/                # Virtual environment directory (if used)
 ```

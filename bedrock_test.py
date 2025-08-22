@@ -1,65 +1,8 @@
-import boto3
-import json
-import re
+from bedrock_core import get_bedrock_client, send_message_to_bedrock
 
-def clean_response_text(text):
-    """Clean up the model response by removing reasoning blocks and artifacts."""
-    if not text:
-        return ""
-    
-    # Remove reasoning blocks if present
-    cleaned = re.sub(r'<reasoning>.*?</reasoning>', '', text, flags=re.DOTALL)
-    cleaned = cleaned.strip()
-    
-    return cleaned
-
-def send_message_to_bedrock(bedrock_client, messages, max_tokens=300):
-    """Send a message to Bedrock and return the response."""
-    body = {
-        "messages": messages,
-        "max_completion_tokens": max_tokens,
-        "temperature": 0.7
-    }
-    
-    try:
-        response = bedrock_client.invoke_model(
-            modelId="openai.gpt-oss-20b-1:0",
-            contentType="application/json",
-            accept="application/json",
-            body=json.dumps(body)
-        )
-        
-        result = json.loads(response["body"].read())
-        
-        # Parse the response based on the format
-        generated_text = ""
-        
-        if "choices" in result and len(result["choices"]) > 0:
-            # OpenAI-style response format
-            choice = result["choices"][0]
-            if "message" in choice and "content" in choice["message"]:
-                generated_text = choice["message"]["content"]
-            elif "text" in choice:
-                generated_text = choice["text"]
-        elif "results" in result:
-            # Alternative format with 'results'
-            for item in result["results"]:
-                for c in item.get("content", []):
-                    if "text" in c:
-                        generated_text += c["text"]
-        elif "response" in result:
-            generated_text = result.get("response", "")
-        else:
-            # Try to find any text content
-            if "content" in result:
-                generated_text = result["content"]
-            elif "text" in result:
-                generated_text = result["text"]
-        
-        return clean_response_text(generated_text)
-        
-    except Exception as e:
-        return f"Error: {str(e)}"
+"""
+Terminal-based chat client for AWS Bedrock using shared core functions.
+"""
 
 def main():
     print("=== AWS Bedrock Interactive Chat ===")
@@ -68,10 +11,7 @@ def main():
     
     # Initialize Bedrock client
     try:
-        bedrock = boto3.client(
-            service_name="bedrock-runtime",
-            region_name="us-west-2"
-        )
+        bedrock = get_bedrock_client()
         print("✓ Connected to AWS Bedrock")
     except Exception as e:
         print(f"✗ Failed to connect to AWS Bedrock: {e}")
