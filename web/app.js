@@ -154,22 +154,66 @@ formEl.addEventListener('submit', async (e) => {
   sendBtn.disabled = true;
 
   try {
-    const res = await fetch('/api/chat', {
+    // Create placeholder assistant message to stream into
+    const row = document.createElement('div');
+    row.className = 'msg assistant';
+    const avatar = document.createElement('div');
+    avatar.className = 'role assistant';
+    avatar.textContent = 'A';
+    const body = document.createElement('div');
+    body.className = 'content';
+    row.appendChild(avatar);
+    row.appendChild(body);
+    messagesEl.appendChild(row);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    const res = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: conversation, max_tokens: 300 })
     });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      appendMessage('assistant', data.error || 'Request failed');
+    if (!res.ok || !res.body) {
+      const data = await res.json().catch(() => ({ error: 'Request failed' }));
+      body.textContent = data.error || 'Request failed';
+      conversation.push({ role: 'assistant', content: body.textContent });
       return;
     }
 
-    const assistantText = data.text || '';
-    appendMessage('assistant', assistantText);
-    conversation.push({ role: 'assistant', content: assistantText });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // Parse SSE lines
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+      for (const part of parts) {
+        const line = part.trim();
+        if (!line) continue;
+        if (line.startsWith('event:')) continue; // we only need data lines here
+        const dataLine = line.replace(/^data:\s?/, '');
+        if (dataLine === 'end') {
+          // finalize markdown rendering
+          body.innerHTML = markdownToHtml(fullText);
+          conversation.push({ role: 'assistant', content: fullText });
+          continue;
+        }
+        fullText += dataLine;
+        // Optimistic inline render to keep it fast without re-parsing full markdown every token
+        body.textContent = fullText;
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+    }
+
+    // Safety: finalize once more
+    body.innerHTML = markdownToHtml(fullText);
+    conversation.push({ role: 'assistant', content: fullText });
   } catch (err) {
     appendMessage('assistant', String(err));
   } finally {
