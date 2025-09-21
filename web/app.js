@@ -116,6 +116,58 @@ function markdownToHtml(md) {
   return html;
 }
 
+function enhanceCodeBlocks(container) {
+  if (!container) return;
+  
+  // Find all code blocks
+  const codeBlocks = container.querySelectorAll('pre code');
+  codeBlocks.forEach((codeBlock, index) => {
+    const pre = codeBlock.parentElement;
+    
+    // Skip if already enhanced
+    if (pre.querySelector('.code-block-header')) return;
+    
+    // Detect language
+    const className = codeBlock.className;
+    const language = className.match(/language-(\w+)/) ? className.match(/language-(\w+)/)[1] : 'text';
+    
+    // Create header
+    const header = document.createElement('div');
+    header.className = 'code-block-header';
+    header.innerHTML = `
+      <span class="code-language">${language}</span>
+      <button class="copy-code-btn" onclick="copyCodeBlock(this)">Copy</button>
+    `;
+    
+    // Insert header
+    pre.insertBefore(header, codeBlock);
+    
+    // Apply syntax highlighting
+    if (typeof Prism !== 'undefined') {
+      Prism.highlightElement(codeBlock);
+    }
+  });
+}
+
+function copyCodeBlock(button) {
+  const codeBlock = button.parentElement.nextElementSibling;
+  const text = codeBlock.textContent;
+  
+  navigator.clipboard.writeText(text).then(() => {
+    button.textContent = 'Copied!';
+    button.classList.add('copied');
+    setTimeout(() => {
+      button.textContent = 'Copy';
+      button.classList.remove('copied');
+    }, 2000);
+  }).catch(() => {
+    button.textContent = 'Failed';
+    setTimeout(() => {
+      button.textContent = 'Copy';
+    }, 2000);
+  });
+}
+
 // Convert any inline HTML the model might return into Markdown-ish before parsing
 function sanitizeModelTextToMarkdown(text) {
   if (!text) return '';
@@ -158,6 +210,34 @@ function sanitizeModelTextToMarkdown(text) {
   return t;
 }
 
+function updateMessagesLayout() {
+  if (!messagesEl) return;
+  const hasMessages = messagesEl.children.length > 0;
+  if (hasMessages) {
+    messagesEl.classList.remove('empty');
+    // Remove welcome message if it exists
+    const welcomeMsg = messagesEl.querySelector('.welcome-message');
+    if (welcomeMsg) {
+      welcomeMsg.remove();
+    }
+  } else {
+    messagesEl.classList.add('empty');
+    // Add welcome message if it doesn't exist
+    if (!messagesEl.querySelector('.welcome-message')) {
+      const welcomeDiv = document.createElement('div');
+      welcomeDiv.className = 'welcome-message';
+      welcomeDiv.innerHTML = `
+        <h3>Welcome to ChatAnwar</h3>
+        <p>Ask me anything! I can help with questions, writing, coding, analysis, and much more.</p>
+        <p>Try asking about topics like technology, science, creative writing, or problem-solving.</p>
+      `;
+      messagesEl.appendChild(welcomeDiv);
+    }
+  }
+  // Force a reflow to ensure the layout updates
+  messagesEl.offsetHeight;
+}
+
 function scrollToBottom() {
   if (!messagesEl) return;
   // Force immediate scroll to bottom
@@ -190,23 +270,33 @@ function appendMessage(role, content) {
     body.textContent = content;
   }
 
-  const actions = document.createElement('div');
-  actions.className = 'actions';
-  const copyBtn = document.createElement('button');
-  copyBtn.type = 'button';
-  copyBtn.className = 'action-btn';
-  copyBtn.textContent = 'Copy';
-  copyBtn.addEventListener('click', async () => {
-    const text = role === 'assistant' ? body.innerText : body.textContent;
-    try { await navigator.clipboard.writeText(text); copyBtn.textContent = 'Copied'; setTimeout(()=>copyBtn.textContent='Copy', 1200); } catch {}
-  });
-  actions.appendChild(copyBtn);
-
   bubble.appendChild(avatar);
   bubble.appendChild(body);
-  bubble.appendChild(actions);
+  
+  // Only add copy button for assistant messages
+  if (role === 'assistant') {
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'action-btn';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', async () => {
+      const text = body.innerText;
+      try { await navigator.clipboard.writeText(text); copyBtn.textContent = 'Copied'; setTimeout(()=>copyBtn.textContent='Copy', 1200); } catch {}
+    });
+    actions.appendChild(copyBtn);
+    bubble.appendChild(actions);
+  }
   row.appendChild(bubble);
   messagesEl.appendChild(row);
+  
+  // Enhance code blocks with syntax highlighting and copy buttons
+  if (role === 'assistant') {
+    enhanceCodeBlocks(body);
+  }
+  
+  updateMessagesLayout();
   scrollToBottom();
 }
 
@@ -294,6 +384,7 @@ function loadChat(id) {
     if (m.role === 'system') continue;
     appendMessage(m.role, m.content);
   }
+  updateMessagesLayout();
   renderChatList();
 }
 
@@ -358,6 +449,10 @@ formEl.addEventListener('submit', async (e) => {
     hideTyping();
     const sanitized = sanitizeModelTextToMarkdown(responseText);
     body.innerHTML = markdownToHtml(sanitized);
+    
+    // Enhance code blocks with syntax highlighting and copy buttons
+    enhanceCodeBlocks(body);
+    
     conversation.push({ role: 'assistant', content: responseText });
     saveChatsToLocal();
     scrollToBottom();
@@ -379,13 +474,7 @@ inputEl.addEventListener('keydown', (e) => {
   }
 });
 
-// Auto-resize textarea
-const autoResize = () => {
-  inputEl.style.height = 'auto';
-  inputEl.style.height = Math.min(400, inputEl.scrollHeight) + 'px';
-};
-inputEl.addEventListener('input', autoResize);
-setTimeout(autoResize, 0);
+// Fixed height textarea - no auto-resize needed
 
 // Theme handling with persistence
 function applyTheme(theme) {
@@ -407,18 +496,24 @@ newChatBtn?.addEventListener('click', () => {
   ];
   messagesEl.innerHTML = '';
   inputEl.value = '';
-  autoResize();
   inputEl.focus();
   currentChatId = null;
+  updateMessagesLayout();
   renderChatList();
   console.log('New chat started, conversation reset');
 });
 
 // Initial render of chat list
 renderChatList();
-if (currentChatId && chats[currentChatId]) {
-  loadChat(currentChatId);
-}
+
+// Always start with a new chat on app load
+conversation = [
+  { role: 'system', content: 'You are a helpful assistant. Always format responses in Markdown with clear headings, paragraphs, numbered/bulleted lists, and tables when appropriate. Do not include hidden reasoning. Do not use HTML tags; use pure Markdown only. When approaching token limits, conclude your response naturally with a summary or next steps rather than cutting off mid-sentence.' }
+];
+messagesEl.innerHTML = '';
+currentChatId = null;
+updateMessagesLayout();
+inputEl.focus();
 
 // Scroll to bottom controller
 const atBottom = () => Math.abs(messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight) < 2;
@@ -429,6 +524,112 @@ messagesEl.addEventListener('scroll', () => {
 scrollBtn?.addEventListener('click', () => {
   messagesEl.scrollTop = messagesEl.scrollHeight;
   scrollBtn.style.display = 'none';
+});
+
+// Copy entire chat functionality
+function copyEntireChat() {
+  const copyBtn = document.getElementById('copyChatBtn');
+  if (!copyBtn) return;
+  
+  let chatText = '';
+  const messages = messagesEl.querySelectorAll('.msg');
+  
+  messages.forEach(msg => {
+    const role = msg.querySelector('.role');
+    const content = msg.querySelector('.content');
+    
+    if (role && content) {
+      const roleText = role.textContent === 'U' ? 'User' : 'Assistant';
+      const contentText = content.innerText || content.textContent;
+      chatText += `${roleText}: ${contentText}\n\n`;
+    }
+  });
+  
+  if (chatText.trim()) {
+    navigator.clipboard.writeText(chatText.trim()).then(() => {
+      copyBtn.classList.add('copied');
+      copyBtn.textContent = '✓';
+      setTimeout(() => {
+        copyBtn.classList.remove('copied');
+        copyBtn.textContent = '📋';
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy chat:', err);
+    });
+  }
+}
+
+// Chat history search functionality
+let chatSearchResults = [];
+let allChats = [];
+
+function searchChatHistory(query) {
+  if (!query.trim()) {
+    // Show all chats if search is empty
+    restoreAllChats();
+    return;
+  }
+  
+  const chatItems = document.querySelectorAll('.sidebar .item');
+  chatSearchResults = [];
+  
+  chatItems.forEach((item, index) => {
+    const title = item.querySelector('.title');
+    const text = title ? title.textContent.toLowerCase() : '';
+    const isMatch = text.includes(query.toLowerCase());
+    
+    if (isMatch) {
+      chatSearchResults.push(item);
+      item.style.display = 'flex';
+      // Highlight search terms
+      highlightSearchTerms(title, query);
+    } else {
+      item.style.display = 'none';
+    }
+  });
+}
+
+function highlightSearchTerms(element, query) {
+  const text = element.innerHTML;
+  const regex = new RegExp(`(${query})`, 'gi');
+  element.innerHTML = text.replace(regex, '<mark style="background: color-mix(in oklab, var(--accent) 30%, transparent); padding: 2px 4px; border-radius: 4px;">$1</mark>');
+}
+
+function restoreAllChats() {
+  const chatItems = document.querySelectorAll('.sidebar .item');
+  chatItems.forEach(item => {
+    item.style.display = 'flex';
+    const title = item.querySelector('.title');
+    if (title) {
+      // Remove highlighting
+      title.innerHTML = title.textContent;
+    }
+  });
+  chatSearchResults = [];
+}
+
+// Add search functionality
+document.addEventListener('DOMContentLoaded', () => {
+  const copyChatBtn = document.getElementById('copyChatBtn');
+  if (copyChatBtn) {
+    copyChatBtn.addEventListener('click', copyEntireChat);
+  }
+  
+  const chatSearchInput = document.getElementById('chatSearchInput');
+  
+  if (chatSearchInput) {
+    chatSearchInput.addEventListener('input', (e) => {
+      searchChatHistory(e.target.value);
+    });
+    
+    chatSearchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        chatSearchInput.value = '';
+        restoreAllChats();
+        chatSearchInput.blur();
+      }
+    });
+  }
 });
 
 

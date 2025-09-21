@@ -19,42 +19,455 @@
       .sidebar .newchat { margin: 10px 0 14px; }
       .btn { width: 100%; border: 1px solid var(--input-border); background: var(--button-bg); color: var(--button-text); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
       .sidebar .list { flex:1 1 auto; overflow:auto; display:flex; flex-direction: column; gap: 8px; }
-      .sidebar .item { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); background: transparent; text-align: left; cursor: pointer; display:flex; align-items:center; justify-content: flex-start; gap:8px; }
-      .sidebar .item .title { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .sidebar .item:hover { border-color: var(--accent); }
-      .sidebar .item.active { background: color-mix(in oklab, var(--accent) 18%, transparent); border-color: var(--accent); }
+      .sidebar .item { 
+        width: 100%; 
+        border: 1px solid var(--border); 
+        border-radius: 12px; 
+        padding: 12px 14px; 
+        color: var(--text); 
+        background: transparent; 
+        text-align: left; 
+        cursor: pointer; 
+        display: flex; 
+        align-items: center; 
+        justify-content: flex-start; 
+        gap: 10px; 
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .sidebar .item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--accent);
+        transform: scaleY(0);
+        transition: transform 0.2s ease;
+      }
+      .sidebar .item .title { 
+        flex: 1 1 auto; 
+        white-space: nowrap; 
+        overflow: hidden; 
+        text-overflow: ellipsis; 
+        font-weight: 500;
+        font-size: 14px;
+      }
+      .sidebar .item:hover { 
+        border-color: var(--accent); 
+        background: color-mix(in oklab, var(--accent) 8%, transparent);
+        transform: translateX(2px);
+      }
+      .sidebar .item:hover::before {
+        transform: scaleY(1);
+      }
+      .sidebar .item.active { 
+        background: color-mix(in oklab, var(--accent) 18%, transparent); 
+        border-color: var(--accent); 
+        transform: translateX(2px);
+      }
+      .sidebar .item.active::before {
+        transform: scaleY(1);
+      }
+      
+      /* Chat history search */
+      .chat-search-container { 
+        padding: 12px; 
+        border-bottom: 1px solid var(--border);
+        background: color-mix(in oklab, var(--card) 50%, transparent);
+      }
+      .chat-search-input { 
+        width: 100%; 
+        background: var(--bg); 
+        color: var(--text); 
+        border: 1px solid var(--border); 
+        padding: 8px 12px 8px 36px; 
+        border-radius: 20px; 
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+      .chat-search-input:focus { 
+        outline: none; 
+        border-color: var(--accent); 
+        box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 20%, transparent);
+      }
+      .chat-search-icon { 
+        position: absolute; 
+        left: 20px; 
+        top: 50%; 
+        transform: translateY(-50%);
+        color: var(--muted); 
+        font-size: 14px;
+        pointer-events: none;
+      }
+      .chat-search-wrapper {
+        position: relative;
+      }
 
       .container { padding: 24px; height: 100%; display:flex; flex-direction: column; }
       header { display:flex; align-items:center; gap:12px; margin-bottom: 12px; flex: 0 0 auto; }
       header h1 { font-size: 20px; margin: 0; font-weight:600; }
       .spacer { flex: 1 1 auto; }
+      .search-container { 
+        position: relative; 
+        display: flex; 
+        align-items: center; 
+        gap: 8px; 
+        margin-right: 12px;
+      }
+      .search-input { 
+        background: var(--card); 
+        color: var(--text); 
+        border: 1px solid var(--border); 
+        padding: 8px 12px 8px 36px; 
+        border-radius: 20px; 
+        width: 200px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+      .search-input:focus { 
+        outline: none; 
+        border-color: var(--accent); 
+        box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 20%, transparent);
+        width: 250px;
+      }
+      .search-icon { 
+        position: absolute; 
+        left: 12px; 
+        color: var(--muted); 
+        font-size: 16px;
+        pointer-events: none;
+      }
+      .clear-search { 
+        background: none; 
+        border: none; 
+        color: var(--muted); 
+        cursor: pointer; 
+        padding: 4px; 
+        border-radius: 50%; 
+        display: none;
+        transition: all 0.2s ease;
+      }
+      .clear-search:hover { 
+        background: var(--border); 
+        color: var(--text); 
+      }
       .theme select { appearance: none; background: var(--card); color: var(--text); border: 1px solid var(--border); padding: 8px 10px; border-radius: 10px; }
-      .chat { background: var(--card); border-radius: 16px; padding: 0; display:flex; flex-direction: column; flex: 1 1 auto; min-height: 0; box-shadow: 0 6px 24px var(--shadow); border: 1px solid var(--border); }
-      .messages { position: relative; flex:1 1 auto; overflow:auto; padding: 16px 16px 96px 16px; scroll-behavior: smooth; display:flex; flex-direction: column; align-items: center; }
+      .chat { background: var(--card); border-radius: 16px; padding: 0; display:flex; flex-direction: column; flex: 1 1 auto; min-height: 0; box-shadow: 0 6px 24px var(--shadow); border: 1px solid var(--border); position: relative; }
+      .messages { 
+        position: sticky; 
+        top: 0; 
+        flex: 1 1 auto; 
+        overflow: auto; 
+        padding: 16px 16px 96px 16px; 
+        scroll-behavior: smooth; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        height: calc(100vh - 120px);
+        background: linear-gradient(180deg, var(--bg) 0%, color-mix(in oklab, var(--bg) 95%, var(--accent)) 100%);
+      }
+      .messages.empty { 
+        justify-content: center; 
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+      }
+      .welcome-message { 
+        text-align: center; 
+        color: var(--muted); 
+        font-size: 14px; 
+        margin-top: 20px; 
+        padding: 0 20px;
+        line-height: 1.5;
+      }
+      .welcome-message h3 { 
+        color: var(--text); 
+        margin: 0 0 8px 0; 
+        font-size: 18px; 
+        font-weight: 600;
+      }
+      .welcome-message p { 
+        margin: 0; 
+        opacity: 0.8;
+      }
       .msg { width: 100%; display:flex; justify-content: center; }
-      .bubble { display:flex; gap:12px; padding:14px 16px; border-radius: 16px; margin: 6px 0; max-width: 900px; width: 100%; border: 1px solid var(--border); box-shadow: 0 6px 24px var(--shadow); }
+      .bubble { display:flex; gap:12px; padding:14px 16px 40px 16px; border-radius: 16px; margin: 6px 0; max-width: 900px; width: 100%; border: 1px solid var(--border); box-shadow: 0 6px 24px var(--shadow); position: relative; }
       .bubble.user { margin-left: auto; margin-right: 0; }
       .bubble.assistant { margin-left: 0; margin-right: auto; }
-      .bubble.user { background: color-mix(in oklab, var(--accent) 12%, transparent); border-top-right-radius: 6px; }
-      .bubble.assistant { background: rgba(255,255,255,0.05); border-top-left-radius: 6px; }
-      .msg .actions { margin-left: auto; display:flex; gap:6px; opacity: 0.0; transition: opacity .15s ease-in-out; }
-      .msg:hover .actions { opacity: 1; }
-      .action-btn { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 4px 8px; border-radius: 8px; cursor: pointer; font-size: 12px; }
-      .action-btn:hover { color: var(--text); border-color: var(--accent); }
+      .bubble.user { 
+        background: color-mix(in oklab, var(--accent) 15%, transparent); 
+        border-top-right-radius: 6px; 
+        border: 1px solid color-mix(in oklab, var(--accent) 25%, transparent);
+        box-shadow: 0 2px 12px color-mix(in oklab, var(--accent) 10%, transparent);
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .bubble.user::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        opacity: 0.6;
+      }
+      .bubble.assistant { 
+        background: rgba(255,255,255,0.05); 
+        border-top-left-radius: 6px; 
+        border: 1px solid rgba(255,255,255,0.1);
+        backdrop-filter: blur(10px);
+      }
+      .msg .actions { 
+        display: flex; 
+        gap: 6px; 
+        opacity: 0.0; 
+        transition: opacity .15s ease-in-out;
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        z-index: 10;
+      }
+      
+      /* Ensure actions are visible on hover */
+      .msg:hover .actions {
+        opacity: 1 !important;
+      }
+      .action-btn { 
+        background: var(--card); 
+        color: var(--muted); 
+        border: 1px solid var(--border); 
+        padding: 6px 10px; 
+        border-radius: 8px; 
+        cursor: pointer; 
+        font-size: 12px; 
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+      }
+      .action-btn:hover { 
+        color: var(--text); 
+        border-color: var(--accent); 
+        background: var(--accent);
+        color: var(--button-text);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      }
       .role { width: 28px; height: 28px; border-radius: 50%; display:grid; place-items:center; font-size:13px; font-weight:700; flex:0 0 auto; }
-      .role.user { background: var(--accent); color:#081225; }
-      .role.assistant { background: #2a3358; color:#cbd3ea; }
+      .role.user { 
+        background: rgba(255,255,255,0.9); 
+        color: var(--accent); 
+        font-weight: 700;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+      .role.assistant { 
+        background: #2a3358; 
+        color: #cbd3ea; 
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      }
       .content { line-height: 1.6; flex: 1 1 auto; }
+      .bubble.user .content { 
+        color: var(--text); 
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
       .content p { margin: 0 0 10px; }
       .content h1, .content h2, .content h3, .content h4 { margin: 10px 0 8px; }
       .content ul, .content ol { margin: 8px 0 8px 20px; }
-      .content code { background:var(--code-bg); padding: 2px 6px; border-radius: 6px; }
-      .content pre { background:var(--code-bg); padding: 12px; border-radius: 10px; overflow:auto; }
+      .content code { 
+        background: var(--code-bg); 
+        padding: 2px 6px; 
+        border-radius: 6px; 
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 0.9em;
+      }
+      .content pre { 
+        background: #1e1e1e; 
+        padding: 16px; 
+        border-radius: 10px; 
+        overflow: auto; 
+        position: relative;
+        border: 1px solid #333;
+        margin: 16px 0;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .code-block-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #2d2d30;
+        padding: 8px 12px;
+        margin: -16px -16px 12px -16px;
+        border-radius: 10px 10px 0 0;
+        border-bottom: 1px solid #333;
+        font-size: 12px;
+        color: #cccccc;
+      }
+      .code-language {
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .copy-code-btn {
+        background: var(--accent);
+        color: var(--button-text);
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 600;
+      }
+      .copy-code-btn:hover {
+        background: color-mix(in oklab, var(--accent) 80%, black);
+        transform: scale(1.05);
+      }
+      .copy-code-btn.copied {
+        background: #10b981;
+        color: white;
+      }
+      
+      /* Floating copy chat button */
+      .copy-chat-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: var(--accent);
+        color: var(--button-text);
+        border: none;
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 20px color-mix(in oklab, var(--accent) 30%, transparent);
+        transition: all 0.3s ease;
+        z-index: 1000;
+        font-size: 20px;
+      }
+      
+      .copy-chat-btn:hover {
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 6px 25px color-mix(in oklab, var(--accent) 40%, transparent);
+      }
+      
+      .copy-chat-btn.copied {
+        background: #10b981;
+        transform: scale(1.1);
+      }
+      
+      /* Enhanced syntax highlighting colors */
+      .content pre code {
+        background: transparent !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        font-size: inherit !important;
+      }
+      
+      /* Custom VS Code-like colors */
+      .content pre code * { color: inherit !important; }
+      .token.comment { color: #6a9955 !important; }
+      .token.keyword { color: #569cd6 !important; }
+      .token.string { color: #ce9178 !important; }
+      .token.number { color: #b5cea8 !important; }
+      .token.function { color: #dcdcaa !important; }
+      .token.class-name { color: #4ec9b0 !important; }
+      .token.operator { color: #d4d4d4 !important; }
+      .token.punctuation { color: #d4d4d4 !important; }
+      .token.variable { color: #9cdcfe !important; }
+      .token.constant { color: #4fc1ff !important; }
+      .token.boolean { color: #569cd6 !important; }
+      .token.attr-name { color: #92c5f8 !important; }
+      .token.attr-value { color: #ce9178 !important; }
+      
+      /* Ensure code text is visible */
+      .content pre code {
+        color: #d4d4d4 !important;
+        background: transparent !important;
+      }
+      
+      /* Fallback for unhighlighted code */
+      .content pre {
+        color: #d4d4d4 !important;
+      }
+      
+      .content pre * {
+        color: inherit !important;
+      }
       .content table { border-collapse: collapse; width: 100%; margin: 8px 0; }
       .content th, .content td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; }
       form { display:flex; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--border); position: sticky; bottom: 0; background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0)) , var(--card); border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; }
-      textarea { flex:1; resize: none; min-height: 52px; max-height: 40vh; padding:12px 12px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text); line-height:1.4; caret-color: var(--text); }
-      button { width: 44px; height: 44px; display:grid; place-items:center; border-radius: 12px; border: 1px solid var(--input-border); background: var(--button-bg); color: var(--button-text); font-weight: 700; cursor: pointer; align-self: flex-end; }
+      .input-container { position: relative; flex: 1; display: flex; align-items: center; }
+      textarea { 
+        flex:1; 
+        resize: none; 
+        height: 48px; 
+        min-height: 48px; 
+        max-height: 48px; 
+        padding: 12px 50px 12px 12px; 
+        border-radius: 12px; 
+        border: 1px solid var(--input-border); 
+        background: var(--input-bg); 
+        color: var(--text); 
+        line-height: 1.2; 
+        caret-color: var(--text); 
+        font-family: inherit; 
+        font-size: 14px; 
+        overflow: hidden;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      textarea:focus { 
+        outline: none; 
+        border-color: var(--accent); 
+        box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 20%, transparent), 0 2px 8px rgba(0,0,0,0.15);
+        transform: translateY(-1px);
+      }
+      textarea::placeholder { 
+        color: var(--muted); 
+        opacity: 0.8;
+      }
+      .send-button { 
+        position: absolute; 
+        right: 8px; 
+        top: 50%; 
+        transform: translateY(-50%); 
+        width: 32px; 
+        height: 32px; 
+        display: grid; 
+        place-items: center; 
+        border-radius: 8px; 
+        border: none; 
+        background: var(--button-bg); 
+        color: var(--button-text); 
+        font-weight: 700; 
+        cursor: pointer; 
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      }
+      .send-button:hover { 
+        background: color-mix(in oklab, var(--button-bg) 80%, black); 
+        transform: translateY(-50%) scale(1.05);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      }
+      .send-button:disabled { 
+        opacity: 0.5; 
+        cursor: not-allowed; 
+        transform: translateY(-50%);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
       button[disabled] { opacity: 0.7; cursor: not-allowed; }
       .muted { color: var(--muted); font-size: 13px; }
 
@@ -78,6 +491,12 @@
           <h2>ChatAnwar</h2>
         </div>
         <div class="newchat"><button id="new-chat" class="btn">New chat</button></div>
+        <div class="chat-search-container">
+          <div class="chat-search-wrapper">
+            <span class="chat-search-icon">🔍</span>
+            <input type="text" class="chat-search-input" id="chatSearchInput" placeholder="Search chat history...">
+          </div>
+        </div>
         <div id="chat-list" class="list"></div>
       </aside>
 
@@ -101,17 +520,27 @@
             <button id="scroll-bottom" class="scroll-bottom" title="Scroll to bottom">↓</button>
           </div>
           <form id="form">
-            <textarea id="input" placeholder="Ask something... (Shift+Enter for newline)" required></textarea>
-            <button id="send" type="submit" aria-label="Send"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12L20 4L13 20L11 13L4 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <div class="input-container">
+              <textarea id="input" placeholder="Ask something... (Shift+Enter for newline)" required></textarea>
+              <button id="send" type="submit" class="send-button" aria-label="Send"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12L20 4L13 20L11 13L4 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            </div>
           </form>
         </div>
       </div>
     </div>
 
-    <!-- Markdown renderer -->
+    <!-- Markdown renderer and syntax highlighting -->
     <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-vsc-dark-plus.min.css" rel="stylesheet">
     <script src="./app.js"></script>
+    
+    <!-- Floating copy chat button -->
+    <button class="copy-chat-btn" id="copyChatBtn" title="Copy entire chat">
+      📋
+    </button>
   </body>
   </html>
 
