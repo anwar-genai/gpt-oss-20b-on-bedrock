@@ -25,6 +25,9 @@ def get_bedrock_client():
 
 def send_message_to_bedrock(bedrock_client, messages, max_tokens: int = 300) -> str:
     """Send a message to Bedrock and return the cleaned response text."""
+    if not bedrock_client:
+        return "Error: Bedrock client not initialized"
+        
     body = {
         "messages": messages,
         "max_completion_tokens": max_tokens,

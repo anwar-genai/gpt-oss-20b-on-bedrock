@@ -15,7 +15,7 @@ try:
             {"role": "system", "content": "You are a helpful assistant. Provide only the requested content without any reasoning, explanations, or meta-commentary."},
             {"role": "user", "content": "Write exactly two sentences explaining why AWS regions matter for businesses and applications."}
         ],
-        "max_completion_tokens": 200,
+        "max_completion_tokens": 900,
         "temperature": 0.7
     }
 
