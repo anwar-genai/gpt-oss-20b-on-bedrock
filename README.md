@@ -1,4 +1,5 @@
 # ChatAnwar (AWS Bedrock web chat)
+<img width="1905" height="1010" alt="Screenshot 2025-08-23 052253" src="https://github.com/user-attachments/assets/c32f4411-711f-4e08-aa3e-aafc2fa9d6d6" />
 
 ChatAnwar is a lightweight web app and API for chatting with AWS Bedrock models. It includes a modern browser UI (streaming responses, Markdown rendering, themes, and chat history) backed by a small Flask server.
 
