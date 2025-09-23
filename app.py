@@ -13,6 +13,8 @@ class Chat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # New: favorite flag
+    is_favorite = db.Column(db.Boolean, default=False, nullable=False)
 
 
 class Message(db.Model):
@@ -28,6 +30,15 @@ bedrock = None
 try:
     with app.app_context():
         db.create_all()
+        # Lightweight migration: add is_favorite to Chat if missing
+        try:
+            cols = db.session.execute(db.text("PRAGMA table_info(chat)"))
+            has_fav = any(row[1] == 'is_favorite' for row in cols)
+            if not has_fav:
+                db.session.execute(db.text("ALTER TABLE chat ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT 0"))
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
     bedrock = get_bedrock_client()
     app.logger.info("Connected to AWS Bedrock runtime")
 except Exception as e:
@@ -150,14 +161,34 @@ def create_chat():
 
 @app.get("/api/chats")
 def list_chats():
-    rows = Chat.query.order_by(Chat.created_at.desc()).all()
-    return jsonify([{"id": c.id, "title": c.title, "createdAt": c.created_at.isoformat()} for c in rows])
+    only_fav = request.args.get('favorites') in ("1", "true", "True")
+    q = Chat.query
+    if only_fav:
+        q = q.filter_by(is_favorite=True)
+    rows = q.order_by(Chat.created_at.desc()).all()
+    return jsonify([{"id": c.id, "title": c.title, "createdAt": c.created_at.isoformat(), "isFavorite": bool(c.is_favorite)} for c in rows])
 
 
 @app.get("/api/chats/<int:chat_id>/messages")
 def list_messages(chat_id: int):
     rows = Message.query.filter_by(chat_id=chat_id).order_by(Message.created_at.asc()).all()
     return jsonify([{"role": m.role, "content": m.content, "createdAt": m.created_at.isoformat()} for m in rows])
+
+
+@app.post("/api/chats/<int:chat_id>/favorite")
+def toggle_favorite(chat_id: int):
+    payload = request.get_json(force=True, silent=True) or {}
+    favorite = bool(payload.get("favorite", True))
+    chat = Chat.query.get(chat_id)
+    if not chat:
+        return jsonify({"error": "chat not found"}), 404
+    try:
+        chat.is_favorite = favorite
+        db.session.commit()
+        return jsonify({"id": chat.id, "isFavorite": bool(chat.is_favorite)})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

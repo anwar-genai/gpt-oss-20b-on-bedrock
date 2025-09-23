@@ -1,9 +1,17 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ChatAnwar</title>
+    <script>
+      (function(){
+        try {
+          var t = localStorage.getItem('theme') || 'dark';
+          document.documentElement.setAttribute('data-theme', t);
+        } catch {}
+      })();
+    </script>
     <style>
       :root { --bg:#0b1020; --card:#121831; --text:#e8ebf5; --muted:#8b93a7; --accent:#6ea8fe; --input-bg:#0e1530; --input-border:#263158; --button-bg:#6ea8fe; --button-text:#081225; --code-bg:#0b102a; --border:#263158; --shadow:rgba(0,0,0,0.4); }
       html[data-theme="dark"] { --bg:#0b1020; --card:#121831; --text:#e8ebf5; --muted:#8b93a7; --accent:#6ea8fe; --input-bg:#0e1530; --input-border:#263158; --button-bg:#6ea8fe; --button-text:#081225; --code-bg:#0b102a; --border:#263158; --shadow:rgba(0,0,0,0.4); }
@@ -403,12 +411,11 @@
       .content pre * {
         color: inherit !important;
       }
-      .content table { border-collapse: collapse; margin: 8px 0; display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      .content table table { display: table; } /* nested tables fallback */
+      /* Table overflow handling: wrap tables so borders are fully visible when scrolling */
+      .table-scroll { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); border-radius: 8px; padding: 2px; margin: 8px 0; }
+      .content table { border-collapse: collapse; margin: 0; display: table; width: max-content; }
       .content thead, .content tbody, .content tr { width: max-content; }
-      .content th, .content td { white-space: nowrap; }
-      .content th, .content td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; }
-      .content th, .content td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; }
+      .content th, .content td { white-space: nowrap; border: 1px solid var(--border); padding: 6px 8px; text-align: left; }
       form { display:flex; gap: 10px; padding: 12px 16px; border-top: none; position: sticky; bottom: 0; background: transparent; border-bottom-left-radius: 0; border-bottom-right-radius: 0; width: 100%; max-width: 900px; margin: 0 auto; }
       .input-container { position: relative; flex: 1; display: flex; align-items: center; width: 100%; }
       textarea { 
@@ -513,7 +520,7 @@
           <div class="muted">Bedrock-powered</div>
           <div class="spacer"></div>
           <div class="header-actions">
-            <button id="open-favorites" class="icon-btn" title="View favorite chats">Favorites</button>
+            <a href="./favorites.html" class="icon-btn" id="open-favorites" title="View favorite chats" style="text-decoration:none;">Favorites</a>
             <button id="share-chat" class="icon-btn" title="Share or copy link">Share</button>
             <button id="copy-link" class="icon-btn" title="Copy chat link">Copy link</button>
           </div>

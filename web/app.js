@@ -158,6 +158,18 @@ function enhanceCodeBlocks(container) {
   });
 }
 
+function enhanceTables(container) {
+  if (!container) return;
+  const tables = container.querySelectorAll(':scope > table, table');
+  tables.forEach((tbl) => {
+    if (tbl.parentElement && tbl.parentElement.classList.contains('table-scroll')) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'table-scroll';
+    tbl.parentNode.replaceChild(wrapper, tbl);
+    wrapper.appendChild(tbl);
+  });
+}
+
 function copyCodeBlock(button) {
   const codeBlock = button.parentElement.nextElementSibling;
   const text = codeBlock.textContent;
@@ -316,6 +328,7 @@ function appendMessage(role, content) {
   // Enhance code blocks with syntax highlighting and copy buttons
   if (role === 'assistant') {
     enhanceCodeBlocks(body);
+    enhanceTables(body);
   }
   
   updateMessagesLayout();
@@ -354,7 +367,7 @@ async function createChat(title) {
     if (res.ok) {
       const data = await res.json();
       const id = String(data.id);
-      chats[id] = { id, title: data.title, messages: [...conversation], createdAt: ts };
+      chats[id] = { id, title: data.title, messages: [...conversation], createdAt: ts, isFavorite: false };
       currentChatId = id;
       saveState();
       renderChatList();
@@ -364,7 +377,7 @@ async function createChat(title) {
     // fall through to local-only
   }
   const id = 'c_' + ts;
-  chats[id] = { id, title: title || 'New chat', messages: [...conversation], createdAt: ts };
+  chats[id] = { id, title: title || 'New chat', messages: [...conversation], createdAt: ts, isFavorite: false };
   currentChatId = id;
   saveState();
   renderChatList();
@@ -388,7 +401,7 @@ function renderChatList() {
     const chat = chats[id];
     const btn = document.createElement('button');
     btn.className = 'item' + (id === currentChatId ? ' active' : '');
-    const isFav = favorites.includes(id);
+    const isFav = !!chat.isFavorite || favorites.includes(id);
     btn.innerHTML = `<span class="title">${escapeHtml(chat.title)}</span><button class="star${isFav ? ' active' : ''}" title="Toggle favorite">${isFav ? '★' : '☆'}</button>`;
     btn.addEventListener('click', () => {
       loadChat(id);
@@ -397,12 +410,25 @@ function renderChatList() {
       saveState();
     });
     // Star toggle
-    btn.querySelector('.star')?.addEventListener('click', (e) => {
+    btn.querySelector('.star')?.addEventListener('click', async (e) => {
       e.stopPropagation();
-      const idx = favorites.indexOf(id);
-      if (idx >= 0) favorites.splice(idx, 1); else favorites.push(id);
-      saveState();
-      renderChatList();
+      // Call backend if server id; fallback to local
+      if (!String(id).startsWith('c_')) {
+        try {
+          const desired = !isFav;
+          const res = await fetch(`/api/chats/${encodeURIComponent(id)}/favorite`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ favorite: desired })
+          });
+          if (res.ok) {
+            chats[id].isFavorite = desired;
+          }
+        } catch {}
+      } else {
+        const idx = favorites.indexOf(id);
+        if (idx >= 0) favorites.splice(idx, 1); else favorites.push(id);
+      }
+      saveState(); renderChatList();
     });
     chatListEl.appendChild(btn);
   }
@@ -535,7 +561,7 @@ newChatBtn?.addEventListener('click', () => {
   inputEl.value = '';
   inputEl.focus();
   currentChatId = null;
-  try { history.replaceState(null, '', '#'); } catch {}
+  try { history.replaceState(null, '', window.location.pathname); } catch {}
   updateMessagesLayout();
   renderChatList();
   console.log('New chat started, conversation reset');
@@ -710,7 +736,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const renderFavoritesPage = () => {
     if (!favoritesList) return;
     favoritesList.innerHTML = '';
-    const favIds = favorites.filter(id => !!chats[id]);
+    const favIds = Object.keys(chats).filter(id => chats[id].isFavorite || favorites.includes(id));
     if (favIds.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'muted';
@@ -781,6 +807,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // Bootstrap chats and UI state
   bootstrapChats();
+
+  // Initial fetch of server chats to hydrate titles and favorites
+  (async () => {
+    try {
+      const res = await fetch('/api/chats');
+      if (res.ok) {
+        const list = await res.json();
+        list.forEach(c => {
+          const id = String(c.id);
+          if (!chats[id]) chats[id] = { id, title: c.title, messages: [], createdAt: Date.parse(c.createdAt) || Date.now(), isFavorite: !!c.isFavorite };
+          else chats[id].isFavorite = !!c.isFavorite;
+        });
+        saveState();
+        renderChatList();
+      }
+    } catch {}
+  })();
 });
 
 

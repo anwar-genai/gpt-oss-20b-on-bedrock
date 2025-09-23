@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Favorite Chats – ChatAnwar</title>
+    <script>
+      (function(){
+        try {
+          var t = localStorage.getItem('theme') || 'dark';
+          document.documentElement.setAttribute('data-theme', t);
+        } catch {}
+      })();
+    </script>
+    <style>
+      :root { --bg:#0b1020; --card:#121831; --text:#e8ebf5; --muted:#8b93a7; --accent:#6ea8fe; --input-bg:#0e1530; --input-border:#263158; --button-bg:#6ea8fe; --button-text:#081225; --code-bg:#0b102a; --border:#263158; --shadow:rgba(0,0,0,0.4); }
+      body { margin:0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+      .layout { min-height: 100vh; width: 100%; display: grid; grid-template-columns: 260px 1fr; gap: 12px; padding: 12px; }
+      .sidebar { background: var(--card); border: 1px solid var(--border); border-radius: 16px; display:flex; flex-direction: column; padding: 12px; box-shadow: 0 6px 24px var(--shadow); position: sticky; top: 12px; height: calc(100vh - 24px); }
+      .sidebar .brand { display:flex; align-items:center; gap:10px; padding: 8px 10px; }
+      .sidebar .list { flex:1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; display:flex; flex-direction: column; gap: 8px; }
+      .sidebar .item { width: 100%; border: none; border-radius: 10px; padding: 10px 12px; color: var(--text); background: transparent; text-align: left; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+      .sidebar .item:hover { background: color-mix(in oklab, var(--accent) 8%, transparent); }
+      .sidebar .item .title { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; font-size: 14px; }
+      .container { padding: 24px; display:flex; flex-direction: column; align-items: center; }
+      header { width: 100%; max-width: 1200px; display:flex; align-items:center; gap:12px; margin-bottom: 12px; }
+      .card { background: var(--card); border:1px solid var(--border); border-radius: 16px; padding: 16px; width: 100%; max-width: 1000px; }
+      .list { display:flex; flex-direction: column; gap:8px; }
+      .item-row { display:flex; align-items:center; justify-content: space-between; padding: 10px 12px; border-radius: 10px; border:1px solid var(--border); background: transparent; color: var(--text); cursor: pointer; }
+      .item-row:hover { background: color-mix(in oklab, var(--accent) 8%, transparent); }
+      .muted { color: var(--muted); }
+      .icon-btn { background: var(--card); color: var(--text); border: 1px solid var(--border); height: 32px; padding: 0 10px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap:6px; }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12L20 4L13 20L11 13L4 12Z" stroke="#6ea8fe" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h2>ChatAnwar</h2>
+        </div>
+        <div class="list" id="sidebar-list">
+          <a href="./" class="item">← Back to chat</a>
+        </div>
+      </aside>
+      <div class="container">
+        <header>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12L20 4L13 20L11 13L4 12Z" stroke="#6ea8fe" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h1>Favorite Chats</h1>
+          <div style="flex:1"></div>
+          <a href="./" class="icon-btn">Back</a>
+        </header>
+        <div class="card">
+          <div id="fav-list" class="list"></div>
+        </div>
+      </div>
+    </div>
+    <script>
+      // Apply saved theme to match main page
+      (function syncTheme(){
+        try {
+          const t = localStorage.getItem('theme') || 'dark';
+          document.documentElement.setAttribute('data-theme', t);
+        } catch {}
+      })();
+
+      async function loadFavorites() {
+        const listEl = document.getElementById('fav-list');
+        listEl.innerHTML = '';
+        try {
+          const res = await fetch('/api/chats?favorites=1');
+          if (!res.ok) throw new Error('Failed');
+          const rows = await res.json();
+          if (!rows.length) {
+            const empty = document.createElement('div');
+            empty.className = 'muted';
+            empty.textContent = 'No favorites yet.';
+            listEl.appendChild(empty);
+            return;
+          }
+          rows.forEach(r => {
+            const row = document.createElement('a');
+            row.className = 'item-row';
+            row.href = `./#chat=${encodeURIComponent(r.id)}`;
+            row.innerHTML = `<span class=\"title\">${r.title}</span><span class=\"muted\">#${r.id}</span>`;
+            listEl.appendChild(row);
+          });
+        } catch (e) {
+          const err = document.createElement('div');
+          err.className = 'muted';
+          err.textContent = 'Failed to load favorites.';
+          listEl.appendChild(err);
+        }
+      }
+      
+      async function loadSidebarChats() {
+        const side = document.getElementById('sidebar-list');
+        if (!side) return;
+        // Keep the back link at the top; append others below
+        try {
+          const res = await fetch('/api/chats');
+          if (!res.ok) return;
+          const rows = await res.json();
+          rows.forEach(c => {
+            const btn = document.createElement('a');
+            btn.className = 'item';
+            btn.href = `./#chat=${encodeURIComponent(c.id)}`;
+            const star = c.isFavorite ? '★' : '☆';
+            btn.innerHTML = `<span class=\"title\">${c.title}</span><span class=\"muted\">${star}</span>`;
+            side.appendChild(btn);
+          });
+        } catch {}
+      }
+
+      loadFavorites();
+      loadSidebarChats();
+    </script>
+  </body>
+  </html>
+
+
