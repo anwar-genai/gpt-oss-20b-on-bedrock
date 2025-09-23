@@ -122,26 +122,32 @@ function enhanceCodeBlocks(container) {
   
   // Find all code blocks
   const codeBlocks = container.querySelectorAll('pre code');
-  codeBlocks.forEach((codeBlock, index) => {
+  codeBlocks.forEach((codeBlock) => {
     const pre = codeBlock.parentElement;
     
-    // Skip if already enhanced
+    // Skip if already enhanced with header
     if (pre.querySelector('.code-block-header')) return;
     
-    // Detect language
+    // Detect language from class name
     const className = codeBlock.className;
-    const language = className.match(/language-(\w+)/) ? className.match(/language-(\w+)/)[1] : 'text';
+    const language = className.match(/language-(\w+)/) ? className.match(/language-(\w+)/)[1] : 'code';
     
-    // Create header
+    // Wrap code in scroll container
+    if (!codeBlock.parentElement.classList.contains('code-scroll')) {
+      const scrollWrap = document.createElement('div');
+      scrollWrap.className = 'code-scroll';
+      codeBlock.parentNode.replaceChild(scrollWrap, codeBlock);
+      scrollWrap.appendChild(codeBlock);
+    }
+    
+    // Header with language and copy button
     const header = document.createElement('div');
     header.className = 'code-block-header';
     header.innerHTML = `
       <span class="code-language">${language}</span>
       <button class="copy-code-btn" onclick="copyCodeBlock(this)">Copy</button>
     `;
-    
-    // Insert header
-    pre.insertBefore(header, codeBlock);
+    pre.insertBefore(header, pre.firstChild);
     
     // Apply syntax highlighting
     if (typeof Prism !== 'undefined') {
@@ -383,6 +389,9 @@ function renderChatList() {
     btn.innerHTML = `<span class="title">${escapeHtml(chat.title)}</span>`;
     btn.addEventListener('click', () => {
       loadChat(id);
+      // reflect selection in URL and storage
+      try { history.replaceState(null, '', `#chat=${encodeURIComponent(id)}`); } catch {}
+      saveState();
     });
     chatListEl.appendChild(btn);
   }
@@ -392,6 +401,8 @@ function loadChat(id) {
   const chat = chats[id];
   if (!chat) return;
   currentChatId = id;
+  try { history.replaceState(null, '', `#chat=${encodeURIComponent(id)}`); } catch {}
+  saveState();
   messagesEl.innerHTML = '';
   conversation = chat.messages.map(m => ({...m}));
   for (const m of conversation) {
@@ -412,6 +423,7 @@ formEl.addEventListener('submit', async (e) => {
   conversation.push({ role: 'user', content: text });
   if (!currentChatId) {
     currentChatId = await createChat(text);
+    try { history.replaceState(null, '', `#chat=${encodeURIComponent(currentChatId)}`); } catch {}
   } else {
     updateCurrentChatTitleFrom(text);
   }
@@ -512,6 +524,7 @@ newChatBtn?.addEventListener('click', () => {
   inputEl.value = '';
   inputEl.focus();
   currentChatId = null;
+  try { history.replaceState(null, '', '#'); } catch {}
   updateMessagesLayout();
   renderChatList();
   console.log('New chat started, conversation reset');
@@ -521,9 +534,16 @@ newChatBtn?.addEventListener('click', () => {
 function bootstrapChats() {
   try {
     const storedChats = JSON.parse(localStorage.getItem('chats') || '{}');
-    // Always start in a brand new chat; do not auto-load previous
     chats = storedChats;
-    currentChatId = null;
+    // Prefer URL hash chat id if present, else stored currentChatId
+    let urlChatId = null;
+    try {
+      const hash = window.location.hash || '';
+      const match = hash.match(/[#&]?chat=([^&]+)/);
+      if (match) urlChatId = decodeURIComponent(match[1]);
+    } catch {}
+    const storedId = localStorage.getItem('currentChatId');
+    currentChatId = (urlChatId && chats[urlChatId]) ? urlChatId : (storedId && chats[storedId] ? storedId : null);
   } catch {
     chats = {};
     currentChatId = null;
@@ -531,12 +551,16 @@ function bootstrapChats() {
 
   renderChatList();
 
-  // Always show a fresh empty state on load
-  conversation = [
-    { role: 'system', content: 'You are a helpful assistant. Always format responses in Markdown with clear headings, paragraphs, numbered/bulleted lists, and tables when appropriate. Do not include hidden reasoning. Do not use HTML tags; use pure Markdown only. When approaching token limits, conclude your response naturally with a summary or next steps rather than cutting off mid-sentence.' }
-  ];
-  messagesEl.innerHTML = '';
-  updateMessagesLayout();
+  if (currentChatId && chats[currentChatId]) {
+    loadChat(currentChatId);
+  } else {
+    // Fresh empty state
+    conversation = [
+      { role: 'system', content: 'You are a helpful assistant. Always format responses in Markdown with clear headings, paragraphs, numbered/bulleted lists, and tables when appropriate. Do not include hidden reasoning. Do not use HTML tags; use pure Markdown only. When approaching token limits, conclude your response naturally with a summary or next steps rather than cutting off mid-sentence.' }
+    ];
+    messagesEl.innerHTML = '';
+    updateMessagesLayout();
+  }
   inputEl.focus();
 }
 

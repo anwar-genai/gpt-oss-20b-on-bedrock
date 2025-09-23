@@ -20,7 +20,7 @@
       .sidebar .brand h2 { font-size: 16px; margin: 0; }
       .sidebar .newchat { margin: 10px 0 14px; }
       .btn { width: 100%; border: 1px solid var(--input-border); background: var(--button-bg); color: var(--button-text); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
-      .sidebar .list { flex:1 1 auto; overflow:auto; display:flex; flex-direction: column; gap: 8px; overscroll-behavior: contain; }
+      .sidebar .list { flex:1 1 auto; overflow-y: auto; overflow-x: hidden; display:flex; flex-direction: column; gap: 8px; overscroll-behavior: contain; scrollbar-gutter: stable; }
       .sidebar .item { 
         width: 100%; 
         border: none; 
@@ -59,14 +59,14 @@
       }
       .sidebar .item:hover { 
         background: color-mix(in oklab, var(--accent) 8%, transparent);
-        transform: translateX(2px);
+        transform: none;
       }
       .sidebar .item:hover::before {
         transform: scaleY(1);
       }
       .sidebar .item.active { 
         background: color-mix(in oklab, var(--accent) 18%, transparent); 
-        transform: translateX(2px);
+        transform: none;
       }
       .sidebar .item.active::before {
         transform: scaleY(1);
@@ -275,7 +275,7 @@
         background: #1e1e1e; 
         padding: 16px; 
         border-radius: 10px; 
-        overflow: auto; 
+        overflow: hidden; 
         max-width: 100%;
         position: relative;
         border: 1px solid #333;
@@ -284,16 +284,19 @@
         font-size: 14px;
         line-height: 1.5;
       }
-      .content pre code { white-space: pre; overflow-wrap: normal; display: block; max-width: 100%; }
+      /* Scrollable area inside pre so header stays fixed */
+      .content pre .code-scroll { overflow: auto; max-width: 100%; }
+      .content pre code { white-space: pre; overflow-wrap: normal; display: block; min-width: 100%; }
+      /* Code block header (non-sticky) */
       .code-block-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         background: #2d2d30;
         padding: 8px 12px;
-        margin: -16px -16px 12px -16px;
-        border-radius: 10px 10px 0 0;
-        border-bottom: 1px solid #333;
+        margin: 0 0 8px 0;
+        border-radius: 8px;
+        border: 1px solid #333;
         font-size: 12px;
         color: #cccccc;
       }
