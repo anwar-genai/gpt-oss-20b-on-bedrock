@@ -14,11 +14,13 @@ let conversation = [
 ];
 let currentChatId = localStorage.getItem('currentChatId') || null;
 let chats = JSON.parse(localStorage.getItem('chats') || '{}');
+let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
 
 function saveState() {
   localStorage.setItem('chats', JSON.stringify(chats));
   if (currentChatId) localStorage.setItem('currentChatId', currentChatId);
   else localStorage.removeItem('currentChatId');
+  localStorage.setItem('favorites', JSON.stringify(favorites));
 }
 
 function escapeHtml(str) {
@@ -386,12 +388,21 @@ function renderChatList() {
     const chat = chats[id];
     const btn = document.createElement('button');
     btn.className = 'item' + (id === currentChatId ? ' active' : '');
-    btn.innerHTML = `<span class="title">${escapeHtml(chat.title)}</span>`;
+    const isFav = favorites.includes(id);
+    btn.innerHTML = `<span class="title">${escapeHtml(chat.title)}</span><button class="star${isFav ? ' active' : ''}" title="Toggle favorite">${isFav ? '★' : '☆'}</button>`;
     btn.addEventListener('click', () => {
       loadChat(id);
       // reflect selection in URL and storage
       try { history.replaceState(null, '', `#chat=${encodeURIComponent(id)}`); } catch {}
       saveState();
+    });
+    // Star toggle
+    btn.querySelector('.star')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = favorites.indexOf(id);
+      if (idx >= 0) favorites.splice(idx, 1); else favorites.push(id);
+      saveState();
+      renderChatList();
     });
     chatListEl.appendChild(btn);
   }
@@ -663,6 +674,75 @@ document.addEventListener('DOMContentLoaded', () => {
   if (copyChatBtn) {
     copyChatBtn.addEventListener('click', copyEntireChat);
   }
+  // Share and copy link
+  const shareBtn = document.getElementById('share-chat');
+  const copyLinkBtn = document.getElementById('copy-link');
+  const openFavBtn = document.getElementById('open-favorites');
+  const closeFavBtn = document.getElementById('close-favorites');
+  const favoritesPage = document.getElementById('favorites-page');
+  const favoritesList = document.getElementById('favorites-list');
+  const getChatUrl = () => {
+    const id = currentChatId || localStorage.getItem('currentChatId');
+    const base = window.location.origin + window.location.pathname;
+    return id ? `${base}#chat=${encodeURIComponent(id)}` : base;
+  };
+  shareBtn?.addEventListener('click', async () => {
+    const url = getChatUrl();
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'ChatAnwar Chat', url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        shareBtn.textContent = 'Copied!';
+        setTimeout(() => shareBtn.textContent = 'Share', 1200);
+      }
+    } catch {}
+  });
+  copyLinkBtn?.addEventListener('click', async () => {
+    const url = getChatUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      copyLinkBtn.textContent = 'Copied!';
+      setTimeout(() => copyLinkBtn.textContent = 'Copy link', 1200);
+    } catch {}
+  });
+
+  const renderFavoritesPage = () => {
+    if (!favoritesList) return;
+    favoritesList.innerHTML = '';
+    const favIds = favorites.filter(id => !!chats[id]);
+    if (favIds.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'muted';
+      empty.textContent = 'No favorites yet. Click ★ next to a chat to favorite it.';
+      favoritesList.appendChild(empty);
+      return;
+    }
+    favIds.forEach(id => {
+      const chat = chats[id];
+      const row = document.createElement('button');
+      row.className = 'item';
+      row.innerHTML = `<span class="title">${escapeHtml(chat.title)}</span><span class="star active">★</span>`;
+      row.addEventListener('click', () => {
+        favoritesPage.style.display = 'none';
+        document.querySelector('.messages').style.display = '';
+        loadChat(id);
+      });
+      favoritesList.appendChild(row);
+    });
+  };
+
+  openFavBtn?.addEventListener('click', () => {
+    if (!favoritesPage) return;
+    renderFavoritesPage();
+    favoritesPage.style.display = '';
+    document.querySelector('.messages').style.display = 'none';
+  });
+  closeFavBtn?.addEventListener('click', () => {
+    if (!favoritesPage) return;
+    favoritesPage.style.display = 'none';
+    document.querySelector('.messages').style.display = '';
+  });
   // Sidebar toggle persistence
   try {
     const collapsed = localStorage.getItem('sidebarCollapsed') === '1';
