@@ -6,6 +6,7 @@ const themeSelectEl = document.getElementById('theme-select');
 const newChatBtn = document.getElementById('new-chat');
 const chatListEl = document.getElementById('chat-list');
 const scrollBtn = document.getElementById('scroll-bottom');
+const layoutEl = document.querySelector('.layout');
 
 // Conversation state and history
 let conversation = [
@@ -215,6 +216,7 @@ function updateMessagesLayout() {
   const hasMessages = messagesEl.children.length > 0;
   if (hasMessages) {
     messagesEl.classList.remove('empty');
+    messagesEl.closest('.chat')?.classList.remove('empty-chat');
     // Remove welcome message if it exists
     const welcomeMsg = messagesEl.querySelector('.welcome-message');
     if (welcomeMsg) {
@@ -222,16 +224,36 @@ function updateMessagesLayout() {
     }
   } else {
     messagesEl.classList.add('empty');
+    messagesEl.closest('.chat')?.classList.add('empty-chat');
     // Add welcome message if it doesn't exist
     if (!messagesEl.querySelector('.welcome-message')) {
       const welcomeDiv = document.createElement('div');
       welcomeDiv.className = 'welcome-message';
       welcomeDiv.innerHTML = `
-        <h3>Welcome to ChatAnwar</h3>
-        <p>Ask me anything! I can help with questions, writing, coding, analysis, and much more.</p>
-        <p>Try asking about topics like technology, science, creative writing, or problem-solving.</p>
+        <div class="welcome-hero">
+          <h2>Welcome to ChatAnwar</h2>
+          <div class="sub">Ask anything. Try one of these to get started:</div>
+        </div>
+        <div class="suggestions">
+          <button class="suggestion" data-prompt="Give me a 7-day meal plan with shopping list.">Healthy 7‑day meal plan + shopping list</button>
+          <button class="suggestion" data-prompt="Draft a polite email requesting a project deadline extension.">Draft a polite extension email</button>
+          <button class="suggestion" data-prompt="Explain Kubernetes like I'm new to DevOps.">Explain Kubernetes for beginners</button>
+          <button class="suggestion" data-prompt="Write a Python script that renames files by date.">Python script: rename files by date</button>
+          <button class="suggestion" data-prompt="Create a study plan to learn SQL in 2 weeks.">2‑week SQL study plan</button>
+          <button class="suggestion" data-prompt="Summarize the key points of Clean Code.">Summarize Clean Code</button>
+        </div>
+        <div class="welcome-bottom"><h3>Start a new chat below</h3></div>
+        <div class="hint-row">Press <strong>Enter</strong> to send • <strong>Shift+Enter</strong> for newline</div>
       `;
       messagesEl.appendChild(welcomeDiv);
+      // Wire suggestions
+      welcomeDiv.querySelectorAll('.suggestion').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const prompt = btn.getAttribute('data-prompt') || btn.textContent;
+          inputEl.value = prompt;
+          inputEl.focus();
+        });
+      });
     }
   }
   // Force a reflow to ensure the layout updates
@@ -239,17 +261,8 @@ function updateMessagesLayout() {
 }
 
 function scrollToBottom() {
-  if (!messagesEl) return;
-  // Force immediate scroll to bottom
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-  // Also ensure it happens after any pending layout updates
-  requestAnimationFrame(() => {
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  });
-  // Double-check after a short delay for any async rendering
-  setTimeout(() => {
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  }, 10);
+  // With page-level scrolling, just scroll the window to the bottom
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 }
 
 function appendMessage(role, content) {
@@ -267,6 +280,7 @@ function appendMessage(role, content) {
   if (role === 'assistant') {
     body.innerHTML = markdownToHtml(sanitizeModelTextToMarkdown(content));
   } else {
+    // Prevent UI from expanding horizontally for long user lines
     body.textContent = content;
   }
 
@@ -503,21 +517,32 @@ newChatBtn?.addEventListener('click', () => {
   console.log('New chat started, conversation reset');
 });
 
-// Initial render of chat list
-renderChatList();
+// Initial load: restore last chat if available; otherwise start fresh
+function bootstrapChats() {
+  try {
+    const storedChats = JSON.parse(localStorage.getItem('chats') || '{}');
+    // Always start in a brand new chat; do not auto-load previous
+    chats = storedChats;
+    currentChatId = null;
+  } catch {
+    chats = {};
+    currentChatId = null;
+  }
 
-// Always start with a new chat on app load
-conversation = [
-  { role: 'system', content: 'You are a helpful assistant. Always format responses in Markdown with clear headings, paragraphs, numbered/bulleted lists, and tables when appropriate. Do not include hidden reasoning. Do not use HTML tags; use pure Markdown only. When approaching token limits, conclude your response naturally with a summary or next steps rather than cutting off mid-sentence.' }
-];
-messagesEl.innerHTML = '';
-currentChatId = null;
-updateMessagesLayout();
-inputEl.focus();
+  renderChatList();
+
+  // Always show a fresh empty state on load
+  conversation = [
+    { role: 'system', content: 'You are a helpful assistant. Always format responses in Markdown with clear headings, paragraphs, numbered/bulleted lists, and tables when appropriate. Do not include hidden reasoning. Do not use HTML tags; use pure Markdown only. When approaching token limits, conclude your response naturally with a summary or next steps rather than cutting off mid-sentence.' }
+  ];
+  messagesEl.innerHTML = '';
+  updateMessagesLayout();
+  inputEl.focus();
+}
 
 // Scroll to bottom controller
-const atBottom = () => Math.abs(messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight) < 2;
-messagesEl.addEventListener('scroll', () => {
+const atBottom = () => (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 2);
+window.addEventListener('scroll', () => {
   if (atBottom()) scrollBtn.style.display = 'none';
   else scrollBtn.style.display = 'grid';
 });
@@ -614,6 +639,26 @@ document.addEventListener('DOMContentLoaded', () => {
   if (copyChatBtn) {
     copyChatBtn.addEventListener('click', copyEntireChat);
   }
+  // Sidebar toggle persistence
+  try {
+    const collapsed = localStorage.getItem('sidebarCollapsed') === '1';
+    if (collapsed) layoutEl.classList.add('collapsed');
+  } catch {}
+  const toggleBtn = document.getElementById('toggle-sidebar');
+  const revealBtn = document.getElementById('reveal-sidebar');
+  const setCollapsed = (isCollapsed) => {
+    if (isCollapsed) layoutEl.classList.add('collapsed');
+    else layoutEl.classList.remove('collapsed');
+    try { localStorage.setItem('sidebarCollapsed', isCollapsed ? '1' : '0'); } catch {}
+    // Update labels
+    if (toggleBtn) toggleBtn.textContent = isCollapsed ? 'Show ⟩' : '⟨ Hide';
+  };
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => setCollapsed(!layoutEl.classList.contains('collapsed')));
+  }
+  if (revealBtn) {
+    revealBtn.addEventListener('click', () => setCollapsed(false));
+  }
   
   const chatSearchInput = document.getElementById('chatSearchInput');
   
@@ -630,6 +675,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+  // Bootstrap chats and UI state
+  bootstrapChats();
 });
 
 
